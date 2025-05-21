@@ -1,132 +1,218 @@
+/* Leonardo Ian de Oliveira */
+
 // Inclusão das bibliotecas necessárias
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>                      // Biblioteca para operações matemáticas (vetores, matrizes)
-#include <glm/gtc/matrix_transform.hpp>     // Funções para transformações geométricas
-#include <glm/gtc/type_ptr.hpp>             // Conversão de matrizes para ponteiros
 #include <iostream>
+#include <string>
 #include <vector>
+#include <cstdlib>
+#include <ctime>
 
-using namespace glm;  // Facilita o uso das funções do glm
+#include <glad/glad.h>  // GLAD: Gerenciador de extensões do OpenGL
+#include <GLFW/glfw3.h> // GLFW: Biblioteca para criar janelas e capturar entrada do usuário
+#include <glm/glm.hpp>  // GLM: Biblioteca para operações matemáticas
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-// Estrutura que representa um triângulo com posição, tamanho e cor
-struct Triangle {
-    vec3 position;    // Posição do triângulo
-    vec3 dimensions;  // Dimensões (escala)
-    vec3 color;       // Cor RGB
+using namespace std;
+using namespace glm;
+
+// Estrutura que representa um triângulo com posição (x, y) e cor (r, g, b)
+struct Triangle
+{
+    float x, y;    // Posição onde o triângulo será desenhado
+    float r, g, b; // Cor RGB do triângulo
 };
 
-// Função que cria um triângulo base (geometria padrão)
-GLuint createBaseTriangle() {
-    float vertices[] = {
-         0.0f, 0.0f, 0.0f,   // Vértice 1
-         0.1f, 0.1f, 0.0f,   // Vértice 2
-         0.2f, 0.0f, 0.0f    // Vértice 3
-    };
+// Vetor que armazena todos os triângulos criados com clique
+vector<Triangle> triangles;
 
-    GLuint VAO, VBO;
-    glGenVertexArrays(1, &VAO);
+// Identificadores para o VAO e o Shader
+GLuint VAO;
+GLuint shaderID;
+
+// Matriz de projeção ortográfica
+mat4 projection;
+
+// Constantes para largura e altura da janela
+const GLuint WIDTH = 800, HEIGHT = 600;
+
+// Código-fonte do shader de vértice
+const GLchar *vertexShaderSource = "#version 400\n"
+                                   "layout (location = 0) in vec3 position;\n"
+                                   "uniform mat4 projection;\n"
+                                   "uniform mat4 model;\n"
+                                   "void main()\n"
+                                   "{\n"
+                                   "gl_Position = projection * model * vec4(position, 1.0);\n"
+                                   "}\0";
+
+// Código-fonte do shader de fragmento
+const GLchar *fragmentShaderSource = "#version 400\n"
+                                     "uniform vec4 inputColor;\n"
+                                     "out vec4 color;\n"
+                                     "void main()\n"
+                                     "{\n"
+                                     "color = inputColor;\n"
+                                     "}\n\0";
+
+// Protótipos das funções de callback e de setup
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods);
+GLuint setupShader();
+GLuint createTriangle(float x0, float y0, float x1, float y1, float x2, float y2);
+
+int main()
+{
+    // Inicializa gerador de números aleatórios
+    srand(static_cast<unsigned int>(time(0)));
+
+    // Inicializa o GLFW e cria a janela
+    glfwInit();
+    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Exercicio 3 - Triangulos com clique", nullptr, nullptr);
+    glfwMakeContextCurrent(window);
+    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+    // Define as funções de callback para teclado e mouse
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+
+    // Configura e ativa o shader
+    shaderID = setupShader();
+    glUseProgram(shaderID);
+
+    // Configura a matriz de projeção ortográfica
+    projection = ortho(0.0f, float(WIDTH), float(HEIGHT), 0.0f, -1.0f, 1.0f);
+    glUniformMatrix4fv(glGetUniformLocation(shaderID, "projection"), 1, GL_FALSE, value_ptr(projection));
+
+    // Cria o VAO de um triângulo padrão (com largura e altura de 100 unidades)
+    VAO = createTriangle(-50.0f, -50.0f, 50.0f, -50.0f, 0.0f, 50.0f);
+
+    // Loop principal do programa
+    while (!glfwWindowShouldClose(window))
+    {
+        glfwPollEvents(); // Processa eventos
+
+        // Limpa a tela com cor de fundo escura
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glBindVertexArray(VAO);
+
+        // Itera sobre todos os triângulos criados
+        for (const Triangle &t : triangles)
+        {
+            mat4 model = mat4(1.0f); // Inicializa a matriz model como identidade
+
+            // Aplica translação para posicionar o triângulo na posição clicada
+            model = translate(model, vec3(t.x, t.y, 0.0f));
+
+            // Envia a matriz model para o shader
+            glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+
+            // Envia a cor do triângulo para o shader
+            glUniform4f(glGetUniformLocation(shaderID, "inputColor"), t.r, t.g, t.b, 1.0f);
+
+            // Desenha o triângulo
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+        }
+
+        glBindVertexArray(0);
+        glfwSwapBuffers(window); // Troca os buffers, exibindo o conteúdo renderizado
+    }
+
+    // Libera os recursos e fecha o GLFW
+    glfwTerminate();
+    return 0;
+}
+
+// Função de callback para teclado
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
+{
+    // Se pressionar ESC, fecha a janela
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
+// Função de callback para clique do mouse
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
+{
+    // Se o botão esquerdo do mouse for pressionado
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    {
+        double xpos, ypos;
+
+        // Obtém a posição do cursor do mouse
+        glfwGetCursorPos(window, &xpos, &ypos);
+
+        // Cria um novo triângulo na posição clicada
+        Triangle tri;
+        tri.x = static_cast<float>(xpos);
+        tri.y = static_cast<float>(ypos);
+
+        // Gera uma cor aleatória para o triângulo
+        tri.r = static_cast<float>(rand() % 100) / 100.0f;
+        tri.g = static_cast<float>(rand() % 100) / 100.0f;
+        tri.b = static_cast<float>(rand() % 100) / 100.0f;
+
+        // Adiciona o triângulo ao vetor
+        triangles.push_back(tri);
+    }
+}
+
+// Função para configurar e compilar os shaders
+GLuint setupShader()
+{
+    // Cria e compila o vertex shader
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    // Cria e compila o fragment shader
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+
+    // Cria o programa de shader e liga os shaders compilados
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    // Deleta os shaders pois já foram vinculados ao programa
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    return shaderProgram; // Retorna o ID do programa de shader
+}
+
+// Função para criar o VAO de um triângulo com coordenadas especificadas
+GLuint createTriangle(float x0, float y0, float x1, float y1, float x2, float y2)
+{
+    // Define os vértices do triângulo
+    GLfloat vertices[] = {
+        x0, y0, 0.0f,
+        x1, y1, 0.0f,
+        x2, y2, 0.0f};
+
+    GLuint VBO, VAO;
+
+    // Gera e configura o VAO e o VBO
     glGenBuffers(1, &VBO);
+    glGenVertexArrays(1, &VAO);
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    // Copia os dados dos vértices para o buffer
+    // Envia os dados dos vértices para o buffer
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // Configura o atributo de posição
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Configura o atributo de vértice (posição)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    return VAO;  // Retorna o identificador do VAO
-}
+    // Desvincula o buffer e o VAO
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 
-int main() {
-    glfwInit();  // Inicializa a GLFW
-
-    // Cria uma janela de 800x600 pixels
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Ex3", NULL, NULL);
-    glfwMakeContextCurrent(window);
-    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);  // Inicializa o GLAD
-
-    // Código-fonte do vertex shader: aplica transformações de modelo e projeção
-    const char* vShader = 
-        "#version 400\n"
-        "layout(location=0) in vec3 position;\n"
-        "uniform mat4 model;\n"
-        "uniform mat4 projection;\n"
-        "void main(){ gl_Position = projection * model * vec4(position, 1.0); }";
-
-    // Código-fonte do fragment shader: define a cor de saída
-    const char* fShader = 
-        "#version 400\n"
-        "uniform vec3 inputColor;\n"
-        "out vec4 color;\n"
-        "void main(){ color = vec4(inputColor, 1.0); }";
-
-    // Compilação do vertex shader
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &vShader, NULL);
-    glCompileShader(vs);
-
-    // Compilação do fragment shader
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fShader, NULL);
-    glCompileShader(fs);
-
-    // Criação do programa de shader e linkagem
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vs);
-    glAttachShader(program, fs);
-    glLinkProgram(program);
-
-    // Cria o VAO de um triângulo base
-    GLuint VAO = createBaseTriangle();
-
-    // Vetor de triângulos com diferentes posições, tamanhos e cores
-    std::vector<Triangle> triangles = {
-        {{100, 100, 0}, {100, 100, 1}, {1.0f, 0.0f, 0.0f}},  // Vermelho
-        {{300, 100, 0}, {100, 100, 1}, {0.0f, 1.0f, 0.0f}},  // Verde
-        {{500, 100, 0}, {100, 100, 1}, {0.0f, 0.0f, 1.0f}},  // Azul
-        {{200, 300, 0}, {100, 100, 1}, {1.0f, 1.0f, 0.0f}},  // Amarelo
-        {{400, 300, 0}, {100, 100, 1}, {1.0f, 0.0f, 1.0f}}   // Magenta
-    };
-
-    glUseProgram(program);  // Ativa o programa de shaders
-
-    // Define a matriz de projeção ortográfica (mesmas dimensões da janela)
-    glm::mat4 projection = glm::ortho(0.0f, 800.0f, 600.0f, 0.0f, -1.0f, 1.0f);
-    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
-    // Loop principal de renderização
-    while (!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT);  // Limpa o buffer de cor
-
-        // Renderiza cada triângulo
-        for (auto& tri : triangles) {
-            glm::mat4 model = glm::mat4(1.0f);  // Matriz identidade
-
-            // Aplica a translação com base na posição do triângulo
-            model = glm::translate(model, tri.position);
-
-            // Aplica a escala com base nas dimensões
-            model = glm::scale(model, tri.dimensions);
-
-            // Envia a matriz de modelo para o shader
-            glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-
-            // Envia a cor para o shader
-            glUniform3fv(glGetUniformLocation(program, "inputColor"), 1, glm::value_ptr(tri.color));
-
-            // Ativa o VAO e desenha o triângulo
-            glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-        }
-
-        glfwSwapBuffers(window);  // Troca os buffers para exibir o resultado
-        glfwPollEvents();         // Processa eventos (teclado, mouse, etc.)
-    }
-
-    glfwTerminate();  // Finaliza a GLFW e libera recursos
-    return 0;
+    return VAO; // Retorna o identificador do VAO
 }
