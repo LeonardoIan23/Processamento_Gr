@@ -28,7 +28,7 @@ uniform mat4 projection;
 out vec2 TexCoord;
 void main() {
     gl_Position = projection * model * vec4(position, 1.0);
-    TexCoord = texCoord;
+    TexCoord = vec2(texCoord.x, 1.0 - texCoord.y);
 })";
 
 const char* fragmentShaderSource = R"(
@@ -62,7 +62,7 @@ int main() {
         {"ground1", loadTexture("ground_1.png")},
         {"ground2", loadTexture("ground_2.png")},
         {"ground3", loadTexture("ground_3.png")},
-        {"player", loadTexture("player.png")} // coloque sua imagem do personagem aqui
+        {"player", loadTexture("player.png")}
     };
 
     glUseProgram(shaderID);
@@ -157,8 +157,10 @@ GLuint createQuad() {
 }
 
 GLuint loadTexture(const char* path) {
-    std::string basePath = "../src/AtividadeVivencialM4"; // Caminho onde está o .cpp
+    std::string basePath = "../src/AtividadeVivencialM4/";
     std::string fullPath = basePath + path;
+
+    std::cout << "Carregando imagem: " << fullPath << std::endl;
 
     GLuint textureID;
     glGenTextures(1, &textureID);
