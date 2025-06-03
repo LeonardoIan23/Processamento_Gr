@@ -1,5 +1,7 @@
-// Marcilio Mendonca Dos Santos 
-// RU:4355739
+// Leonardo Ian de Oliviera
+// Gustavo Scheffel
+
+//Atividade Vivencial Modulo 4
 
 // Bibliotecas padrão e para gráficos/imagem
 #include <iostream>
