@@ -1,15 +1,35 @@
-#ifndef DIAMONDVIEW_H
-#define DIAMONDVIEW_H
+// DiamondView.h - Versão Corrigida e Limpa
 
-#include "TilemapView.h" // <<<--- ESSA LINHA É CRÍTICA!
+#ifndef DiamondView_h
+#define DiamondView_h
 
-class DiamondView : public TilemapView
-{
+#include "TilemapView.h" // Já inclui as definições de direção
+#include <iostream>
+using namespace std;
+
+class DiamondView : public TilemapView {
 public:
-    // ATENÇÃO: Verifique cada caractere aqui, deve ser IDÊNTICO à base (exceto pelo 'virtual' e '=0')
-    void computeTileWalking(int &col, int &row, TileDirection direction) const override; // <<<--- ASSINATURA EXATA com 'override'
-    void computeDrawPosition(int col, int row, float tileWidth, float tileHeight, float &outX, float &outY) const override;
-    void computeMouseMap(int &outCol, int &outRow, float tileWidth, float tileHeight, float mouseX, float mouseY) const override;
+    void computeDrawPosition(const int col, const int row, const float tw, const float th, float &targetx, float &targety) const {
+        targetx = (col - row) * (tw / 2.0f);
+        targety = (col + row) * (th / 2.0f);
+    }
+    
+    void computeMouseMap(int &col, int &row, const float tw, const float th, const float mx, const float my) const {
+        // Lógica de mouse comentada por enquanto.
+    }
+    
+    void computeTileWalking(int &col, int &row, const int direction) const {
+        switch(direction){
+            case DIRECTION_NORTH: col--; row--; break;
+            case DIRECTION_SOUTH: col++; row++; break;
+            case DIRECTION_EAST:  col++; row--; break;
+            case DIRECTION_WEST:  col--; row++; break;
+            case DIRECTION_NORTHEAST: col++; break;
+            case DIRECTION_SOUTHEAST: row++; break;
+            case DIRECTION_SOUTHWEST: col--; break;
+            case DIRECTION_NORTHWEST: row--; break;
+        }
+    }
 };
-
-#endif // DIAMONDVIEW_H
+    
+#endif /* DiamondView_h */
