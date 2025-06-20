@@ -32,6 +32,10 @@ int player_row = 1;
 int tileSetCols = 7;
 float tileW_tex, tileH_tex;
 
+GLuint player_texture;
+unsigned int player_VAO, player_VBO, player_EBO;
+
+
 // --- Funções Auxiliares ---
 TileMap* readMap(const char* filename) {
     ifstream arq(filename);
@@ -58,7 +62,6 @@ TileMap* readMap(const char* filename) {
 int loadTexture(unsigned int& texture, const char* filename) {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    // --- CORREÇÃO DE TEXTURA: Impede a repetição da textura ---
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -105,40 +108,67 @@ int main() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // --- CORREÇÃO 1: Vira as imagens na vertical ao carregar ---
+    stbi_set_flip_vertically_on_load(true);
+
     tmap = readMap("terrain1.tmap");
     if (tmap == NULL) return -1;
     
     GLuint tileset_texture;
     loadTexture(tileset_texture, "terrain.png");
     tmap->setTid(tileset_texture);
+    
+    loadTexture(player_texture, "player.png");
 
     float w_world = 2.0f;
-    float tile_render_width = w_world / 10.0f;
+    float tile_render_width = w_world / 10.0f; 
     float tile_render_height = tile_render_width / 2.0f;
     tileW_tex = 1.0f / (float)tileSetCols;
     tileH_tex = 1.0f;
     
-    float vertices[] = {
+    // Geometria para os TILES DO MAPA
+    unsigned int tile_VAO, tile_VBO, tile_EBO;
+    float tile_vertices[] = {
         -tile_render_width / 2.0f, 0.0f,                       0.0f, 0.5f,
         0.0f,                     -tile_render_height / 2.0f,    0.5f, 0.0f,
         tile_render_width / 2.0f,  0.0f,                       1.0f, 0.5f,
         0.0f,                      tile_render_height / 2.0f,    0.5f, 1.0f,
     };
     unsigned int indices[] = { 0, 1, 2, 0, 2, 3 };
-
-    unsigned int VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glGenVertexArrays(1, &tile_VAO);
+    glGenBuffers(1, &tile_VBO);
+    glGenBuffers(1, &tile_EBO);
+    glBindVertexArray(tile_VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, tile_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(tile_vertices), tile_vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tile_EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    // Geometria para o JOGADOR
+    float player_vertices[] = {
+        -tile_render_width / 2.0f, 0.0f,                   0.0f, 0.0f,
+         tile_render_width / 2.0f, 0.0f,                   1.0f, 0.0f,
+         tile_render_width / 2.0f, tile_render_width,      1.0f, 1.0f,
+        -tile_render_width / 2.0f, tile_render_width,      0.0f, 1.0f
+    };
+    unsigned int player_indices[] = { 0, 1, 2, 2, 3, 0 };
+    glGenVertexArrays(1, &player_VAO);
+    glGenBuffers(1, &player_VBO);
+    glGenBuffers(1, &player_EBO);
+    glBindVertexArray(player_VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, player_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(player_vertices), player_vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, player_EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(player_indices), player_indices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
 
     GLuint shader_programme = create_programme_from_files("_geral_vs.glsl", "_geral_fs.glsl");
 
@@ -147,31 +177,43 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUseProgram(shader_programme);
-        glBindVertexArray(VAO);
-        glBindTexture(GL_TEXTURE_2D, tmap->getTileSet());
         glUniform1i(glGetUniformLocation(shader_programme, "ourTexture"), 0);
         
-        float map_offset_y = ( (float)tmap->getHeight() * tile_render_height ) / 2.0f;
+        // --- DESENHA O MAPA ---
+        glBindVertexArray(tile_VAO);
+        glBindTexture(GL_TEXTURE_2D, tmap->getTileSet());
+        
+        // --- CORREÇÃO 2: Ajuste no offset do mapa para descer um pouco ---
+        float map_offset_y = 0.4f; // Valor negativo desce, valor positivo sobe.
 
         for (int r = 0; r < tmap->getHeight(); r++) {
             for (int c = 0; c < tmap->getWidth(); c++) {
                 int tile_id = (int)tmap->getTile(c, r);
                 int u = tile_id % tileSetCols;
-
                 float screen_x, screen_y;
                 tview->computeDrawPosition(c, r, tile_render_width, tile_render_height, screen_x, screen_y);
-                
                 glUniform1f(glGetUniformLocation(shader_programme, "offsetX"), u * tileW_tex);
                 glUniform1f(glGetUniformLocation(shader_programme, "tileW"), tileW_tex);
                 glUniform1f(glGetUniformLocation(shader_programme, "tx"), screen_x);
                 glUniform1f(glGetUniformLocation(shader_programme, "ty"), screen_y - map_offset_y);
-                
-                float highlight_weight = (c == player_col && r == player_row) ? 0.5f : 0.0f;
-                glUniform1f(glGetUniformLocation(shader_programme, "weight"), highlight_weight);
-
+                glUniform1f(glGetUniformLocation(shader_programme, "weight"), 0.0f);
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             }
         }
+        
+        // --- DESENHA O JOGADOR ---
+        glBindVertexArray(player_VAO);
+        glBindTexture(GL_TEXTURE_2D, player_texture);
+        float player_x, player_y;
+        tview->computeDrawPosition(player_col, player_row, tile_render_width, tile_render_height, player_x, player_y);
+        float player_render_y = player_y - map_offset_y + (tile_render_height * 0.5f);
+        glUniform1f(glGetUniformLocation(shader_programme, "offsetX"), 0.0f);
+        glUniform1f(glGetUniformLocation(shader_programme, "tileW"), 1.0f);
+        glUniform1f(glGetUniformLocation(shader_programme, "tx"), player_x);
+        glUniform1f(glGetUniformLocation(shader_programme, "ty"), player_render_y);
+        glUniform1f(glGetUniformLocation(shader_programme, "weight"), 0.0f);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
 
         glfwPollEvents();
         if (GLFW_PRESS == glfwGetKey(g_window, GLFW_KEY_ESCAPE)) {
