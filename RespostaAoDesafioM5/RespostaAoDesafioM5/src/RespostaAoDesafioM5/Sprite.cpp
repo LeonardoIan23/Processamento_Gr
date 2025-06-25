@@ -3,6 +3,7 @@
 #include "stb_image.h"
 #include <iostream>
 
+// Construtor: Define os valores iniciais para todas as variáveis da classe.
 Sprite::Sprite() {
     shader_programme = 0;
     texture = 0;
@@ -12,15 +13,17 @@ Sprite::Sprite() {
     nAnimations = 0; nFrames = 0;
     currentFrame = 0; currentAnimation = 0;
     isMoving = false;
-    animation_speed = 0.1f;
+    animation_speed = 0.15f;
     last_frame_time = 0.0;
     frame_width = 0.0f; frame_height = 0.0f;
 }
 
+// Define o estado de movimento do sprite (parado ou andando).
 void Sprite::setMoving(bool moving) {
     isMoving = moving;
 }
 
+// Prepara o sprite para ser usado: carrega a textura, os shaders e cria a geometria.
 void Sprite::setup(const char* textureFile, int numAnimations, int numFrames) {
     nAnimations = numAnimations;
     nFrames = numFrames;
@@ -30,49 +33,47 @@ void Sprite::setup(const char* textureFile, int numAnimations, int numFrames) {
     shader_programme = create_programme_from_files("_sprites_vs.glsl", "_sprites_fs.glsl");
 
     glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	int width, height, nrChannels;
-	unsigned char *data = stbi_load(textureFile, &width, &height, &nrChannels, 0);
-	if (data) {
-		if (nrChannels == 4) glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-		else glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	} else {
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data);
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load(textureFile, &width, &height, &nrChannels, 0);
+    if (data) {
+        if (nrChannels == 4) glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        else glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
 
     float scale = 0.2f;
-
-    // --- CORREÇÃO AQUI: Voltando para as coordenadas de textura padrão ---
     float vertices[] = {
-		// Posições     // Coordenadas de Textura Padrão
-		 scale,  scale,   1.0f, 1.0f, // top right
-		 scale, -scale,   1.0f, 0.0f, // bottom right
-		-scale, -scale,   0.0f, 0.0f, // bottom left
-		-scale,  scale,   0.0f, 1.0f  // top left
-	};
-	unsigned int indices[] = { 0, 1, 3, 1, 2, 3 };
+         scale,  scale,   1.0f, 1.0f,
+         scale, -scale,   1.0f, 0.0f,
+        -scale, -scale,   0.0f, 0.0f,
+        -scale,  scale,   0.0f, 1.0f 
+    };
+    unsigned int indices[] = { 0, 1, 3, 1, 2, 3 };
 
     glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
-	glEnableVertexAttribArray(1);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 }
 
+// Atualiza a lógica da animação, avançando para o próximo quadro (frame) se o sprite estiver em movimento.
 void Sprite::update(double deltaTime) {
     if (isMoving) {
         double current_time = glfwGetTime();
@@ -85,14 +86,28 @@ void Sprite::update(double deltaTime) {
     }
 }
 
+// Altera a posição (x,y) do sprite e define a linha da animação correspondente à direção.
 void Sprite::move(int direction, double deltaTime) {
-    currentAnimation = 0; // Sempre usa a primeira (e única) linha da animação
-    if (direction == 3) { posy += speed * deltaTime; } 
-    else if (direction == 0) { posy -= speed * deltaTime; } 
-    else if (direction == 1) { posx -= speed * deltaTime; } 
-    else if (direction == 2) { posx += speed * deltaTime; }
+    // 0=Sul(S), 1=Oeste(A), 2=Leste(D), 3=Norte(W)
+    if (direction == 3) { // Tecla W
+        posy += speed * deltaTime;
+        currentAnimation = 0; // Sua correção: Usa a linha 0 para a animação de andar para cima
+    } 
+    else if (direction == 0) { // Tecla S
+        posy -= speed * deltaTime;
+        currentAnimation = 3; // Sua correção: Usa a linha 3 para a animação de andar para baixo
+    } 
+    else if (direction == 1) { // Tecla A
+        posx -= speed * deltaTime;
+        currentAnimation = 2; // Sua correção: Usa a linha 2 para a animação de andar para esquerda
+    } 
+    else if (direction == 2) { // Tecla D
+        posx += speed * deltaTime;
+        currentAnimation = 1; // Sua correção: Usa a linha 1 para a animação de andar para direita
+    }
 }
 
+// Envia todos os dados (posição, offsets da textura, etc.) para a placa de vídeo e desenha o sprite.
 void Sprite::draw() {
     glUseProgram(shader_programme);
     glBindVertexArray(VAO);
@@ -100,6 +115,8 @@ void Sprite::draw() {
     glBindTexture(GL_TEXTURE_2D, texture);
 
     float offsetx = frame_width * (float)currentFrame;
+    // Note: A sua correção na função move() tornou este cálculo mais simples,
+    // pois a lógica de inversão já foi feita ao escolher a currentAnimation.
     float offsety = frame_height * (float)currentAnimation;
 
     glUniform1f(glGetUniformLocation(shader_programme, "offsetX"), offsetx);

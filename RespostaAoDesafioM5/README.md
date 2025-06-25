@@ -1,28 +1,64 @@
-# Atividade Reposta ao Desafio Modulo 5
+# Atividade: Controle e Animação de Sprites (Módulo 5)
 
-Trabalho desenvolvido para a disciplina **Processamento Grafico**.
+Trabalho desenvolvido para a disciplina **Processamento Gráfico**.
 
 ## 👥 Integrantes do Grupo
 
 - Leonardo Ian de Oliveira
 
-## 🚀 Como executar 
+## 🚀 Como Compilar e Executar
 
+Este projeto utiliza **C++** e **CMake** para gerenciar a compilação.
 
-> Este programa foi feito em **linguagem C++** e pode ser compilado em uma IDE como o **VS Code** (com compilador instalado).
-> No seu computador (VS Code ou outro editor):
+### Pré-requisitos
 
+- Compilador C++ (como o MinGW no Windows, ou g++ no Linux).
+- CMake (versão 3.10 ou superior).
+
+### Passos para Compilação
+
+1.  Clone este repositório para o seu computador.
+2.  Abra um terminal na pasta raiz do projeto.
+3.  Crie uma pasta `build` para a compilação:
+    ```bash
+    mkdir build
+    ```
+4.  Entre na pasta `build`:
+    ```bash
+    cd build
+    ```
+5.  Execute o CMake para configurar o projeto:
+    ```bash
+    cmake ..
+    ```
+6.  Compile o projeto (no Windows com MinGW, o comando geralmente é):
+    ```bash
+    mingw32-make
+    ```
+    (No Linux ou macOS, o comando seria apenas `make`).
+
+7.  Após a compilação, o executável (`main.exe` ou `main`) será criado dentro da pasta `build`.
+
+### Como Rodar
+
+1.  No terminal, ainda dentro da pasta `build`, execute o programa:
+    ```bash
+    ./main.exe
+    ```
 
 ## 💡 Sobre o Programa
-> Programa para mostrar a movinetação do Sprite do Modulo 5
+
+Este programa demonstra a implementação de uma classe `Sprite` em C++ com OpenGL. A aplicação renderiza um personagem animado que pode ser controlado pelo teclado.
+
+- O personagem é animado a partir de um **spritesheet**, com diferentes animações para cada direção.
+- O controle é feito pelas teclas **W, A, S, D**.
+- O programa implementa um estado "parado" (idle), onde a animação da caminhada cessa quando nenhuma tecla de movimento é pressionada.
 
 ## 📌 Observações
 
-> - O código está no arquivo `main.cpp` 
-> - Tentei fazer o maximo possivel , utilizei um Sprite que é 1 x7 então sempre da a impressão que ele anda pra frente mas é facil fazer a alteração caso queira mudar para outro tipo de sprite 
-> - peguei como base os codigos disponiveis no modulo 5, nas atividades e fiz algumas mudanças para que funcione..
-> - estou utilizando a pasta que esta disponivel no git da professora para as aulas 
+- A lógica principal foi organizada e encapsulada na classe `Sprite` (arquivos `Sprite.h` e `Sprite.cpp`). O arquivo `main.cpp` é responsável pelo loop principal e pelo controle do teclado.
+- O sprite utilizado (`player.png`) é um 'spritesheet' com 4 direções de animação (4 linhas) e 4 quadros (frames) por animação.
+- O código foi desenvolvido com base nos exemplos fornecidos no Módulo 5 e refatorado para usar uma estrutura de Orientação a Objetos, como sugerido na tarefa.
 
-## obrigado e espero que goste do trabalho 
-
-
+---
+Obrigado e espero que goste do trabalho!
