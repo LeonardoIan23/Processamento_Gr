@@ -1,0 +1,114 @@
+# Versão mínima do CMake
+cmake_minimum_required(VERSION 3.10)
+project(PGCCHIB)
+
+# Define o padrão do C++
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+# Ativa o FetchContent
+include(FetchContent)
+
+# Configura o FetchContent para baixar e compilar GLFW automaticamente
+FetchContent_Declare(
+  glfw
+  GIT_REPOSITORY https://github.com/glfw/glfw.git
+  GIT_TAG 3.4  # Define a versão desejada da GLFW
+)
+
+# Configura o FetchContent para baixar a GLM automaticamente
+FetchContent_Declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG master  # Define a versão desejada da GLM
+)
+
+# Faz o download e compila as bibliotecas
+FetchContent_MakeAvailable(glfw glm)
+
+# Configura o FetchContent para baixar a stb_image automaticamente
+FetchContent_Declare(
+  stb_image
+  GIT_REPOSITORY https://github.com/nothings/stb.git
+  GIT_TAG master
+)
+
+FetchContent_MakeAvailable(stb_image)
+
+# Adiciona as pastas de cabeçalhos globais
+include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/common)
+include_directories(${CMAKE_SOURCE_DIR}/include/glad)
+include_directories(${glm_SOURCE_DIR})
+
+# --- Apontando para o seu novo projeto ---
+set(EXERCISES
+    TrabalhoGB/main # Alterado para um nome de executável mais descritivo
+)
+
+add_compile_options(-Wno-pragmas)
+
+# Define as bibliotecas de sistema operacional
+if(WIN32)
+    set(OPENGL_LIBS opengl32)
+else()
+    # Lógica para outros sistemas
+endif()
+
+# Caminho para glad.c
+set(GLAD_C_FILE "${CMAKE_SOURCE_DIR}/common/glad.c")
+if (NOT EXISTS ${GLAD_C_FILE})
+    message(FATAL_ERROR "Arquivo glad.c não encontrado!")
+endif()
+
+# Cria os executáveis
+foreach(EXERCISE ${EXERCISES})
+    get_filename_component(EXE_NAME ${EXERCISE} NAME)
+    get_filename_component(EXERCISE_DIR ${EXERCISE} DIRECTORY)
+    
+    # --- MUDANÇA CRÍTICA: Lista de arquivos COM TODOS OS ARQUIVOS .CPP ---
+    set(EXERCISE_SOURCES
+        "src/TrabalhoGB/main.cpp"
+        "src/TrabalhoGB/Map.cpp"
+        "src/TrabalhoGB/Sprite.cpp"
+        "src/TrabalhoGB/gl_utils.cpp"
+        ${GLAD_C_FILE}
+    )
+
+    add_executable(${EXE_NAME} ${EXERCISE_SOURCES})
+
+    # Adiciona os diretórios de inclusão
+    target_include_directories(${EXE_NAME} PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/TrabalhoGB"
+        "${CMAKE_SOURCE_DIR}/common"
+        "${CMAKE_SOURCE_DIR}/include"
+        ${glm_SOURCE_DIR}
+        ${stb_image_SOURCE_DIR}
+    )
+    # Adiciona as bibliotecas para linkar
+    target_link_libraries(${EXE_NAME} glfw ${OPENGL_LIBS} glm::glm)
+
+    # Cópia de arquivos de recurso
+    if(EXE_NAME STREQUAL "main") # O nome do nosso executável agora é "main"
+        add_custom_command(
+            TARGET ${EXE_NAME} POST_BUILD
+            COMMENT "Copiando arquivos de recurso..."
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_SOURCE_DIR}/src/TrabalhoGB/mapa.txt"
+                $<TARGET_FILE_DIR:${EXE_NAME}>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_SOURCE_DIR}/assets/mapa/tileset.png"
+                $<TARGET_FILE_DIR:${EXE_NAME}>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_SOURCE_DIR}/assets/Personagem/player.png"
+                $<TARGET_FILE_DIR:${EXE_NAME}>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_SOURCE_DIR}/src/TrabalhoGB/shader_vs.glsl"
+                $<TARGET_FILE_DIR:${EXE_NAME}>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_SOURCE_DIR}/src/TrabalhoGB/shader_fs.glsl"
+                $<TARGET_FILE_DIR:${EXE_NAME}>
+        )
+    endif()
+
+endforeach()
