@@ -12,8 +12,6 @@ void Player::loadTexture(const char* file, int frames, int animations) {
     this->numAnimations = animations;
 }
 
-// ... Construtor, loadTexture, update, getRenderPosition ficam iguais ...
-
 void Player::processInput(GLFWwindow* window, float dt, const Tilemap& map) {
     if (isVisualMoving || inputTimer < inputCooldown) { return; }
 
@@ -40,11 +38,19 @@ void Player::processInput(GLFWwindow* window, float dt, const Tilemap& map) {
             inputTimer = 0.0f;
             startPos = gridPosition;
             targetPos = potentialTarget;
-            // A lógica de animação pode ser ajustada para 8 direções, mas por agora fica com 4
-            if (moveDir.x > 0) animDirection = ANIM_RIGHT;
-            else if (moveDir.x < 0) animDirection = ANIM_LEFT;
-            else if (moveDir.y > 0) animDirection = ANIM_DOWN;
-            else if (moveDir.y < 0) animDirection = ANIM_UP;
+            
+            // ########## LÓGICA DE ANIMAÇÃO CORRIGIDA ##########
+            // Com base na análise do seu spritesheet, invertemos a lógica para esquerda/direita.
+            if (moveDir.x > 0) {          // Se move para a direita (tecla 'D')...
+                animDirection = ANIM_LEFT_WALK;  // ...usa a animação que está na linha 2.
+            } else if (moveDir.x < 0) {   // Se move para a esquerda (tecla 'A')...
+                animDirection = ANIM_RIGHT_WALK; // ...usa a animação que está na linha 1.
+            } else if (moveDir.y > 0) {   // Se move para baixo (tecla 'S')...
+                animDirection = ANIM_DOWN;       // ...usa a animação da linha 3.
+            } else if (moveDir.y < 0) {   // Se move para cima (tecla 'W')...
+                animDirection = ANIM_UP;         // ...usa a animação da linha 0.
+            }
+            // ######################################################
         }
     }
 }
@@ -73,6 +79,7 @@ void Player::update(float dt, Tilemap& map) {
 void Player::draw(Renderer &renderer, const Tilemap& map) {
     float frameWidth = 1.0f / (float)this->numFrames;
     float frameHeight = 1.0f / (float)this->numAnimations;
+    // A enum é convertida para float implicitamente aqui, o que funciona perfeitamente.
     glm::vec2 uvOffset = { (float)currentFrame * frameWidth, (float)animDirection * frameHeight };
     glm::vec2 uvScale = { frameWidth, frameHeight };
     glm::vec2 renderPos = this->getRenderPosition(map);

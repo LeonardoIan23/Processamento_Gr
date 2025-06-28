@@ -39,7 +39,7 @@ void Game::update(float dt) {
     if (tileToCheck == Map->tileLavaID || (Map->tileAguaID != -1 && tileToCheck == Map->tileAguaID)) {
         this->State = GAME_OVER;
         ThePlayer->gridPosition = ThePlayer->lastValidPosition;
-        std::cout << "GAME OVER! Voce caiu na lava ou na agua." << std::endl;
+        std::cout << "GAME OVER! Voce caiu na agua." << std::endl;
         return;
     }
     int objectIndex = Map->getObjectAt(ThePlayer->gridPosition);

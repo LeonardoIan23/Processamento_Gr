@@ -7,7 +7,16 @@
 #include "Renderer.h"
 #include "Tilemap.h"
 
-enum PlayerAnim { ANIM_DOWN, ANIM_UP, ANIM_LEFT, ANIM_RIGHT };
+// ##### ENUM CORRIGIDA E MAIS DESCRITIVA #####
+// A ordem agora corresponde exatamente às linhas do seu spritesheet (sully.png)
+// Linha 0: Cima, Linha 1: Direita, Linha 2: Esquerda, Linha 3: Baixo
+enum PlayerAnim {
+    ANIM_UP = 3,
+    ANIM_RIGHT_WALK = 2,
+    ANIM_LEFT_WALK = 1,
+    ANIM_DOWN = 0
+};
+// #############################################
 
 class Player {
 public:
@@ -30,6 +39,7 @@ public:
 
 private:
     Texture2D spritesheet;
+    // A direção inicial continua a ser para baixo, mas agora usando a enum correta.
     PlayerAnim animDirection = ANIM_DOWN;
     float animCooldown = 0.1f;
     float animTimer = 0.0f;
