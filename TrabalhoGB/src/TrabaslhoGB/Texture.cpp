@@ -2,10 +2,16 @@
 
 #include "Texture.h"
 #include <iostream>
+
+// Inclui o cabeçalho da stb_image, mas SEM a diretiva de implementação.
+// Assim, este ficheiro apenas "vê" as declarações das funções,
+// enquanto a implementação fica em outro lugar.
 #include "stb_image.h"
 
+// Construtor padrão.
 Texture2D::Texture2D() : Width(0), Height(0), ID(0) {}
 
+// Carrega uma imagem de um ficheiro para criar a textura.
 void Texture2D::load(const char* file, bool alpha) {
     std::cout << "--> Tentando carregar a imagem: '" << file << "'" << std::endl;
     stbi_set_flip_vertically_on_load(true);
@@ -22,6 +28,7 @@ void Texture2D::load(const char* file, bool alpha) {
     stbi_image_free(data);
 }
 
+// Cria o objeto de textura do OpenGL a partir de dados brutos de píxeis.
 void Texture2D::create(unsigned char* data, int width, int height, GLenum format) {
     this->Width = width;
     this->Height = height;
@@ -36,6 +43,7 @@ void Texture2D::create(unsigned char* data, int width, int height, GLenum format
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+// Ativa (bind) esta textura para uso.
 void Texture2D::bind() const {
     glBindTexture(GL_TEXTURE_2D, ID);
 }
